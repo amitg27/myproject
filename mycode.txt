@@ -1,0 +1,26 @@
+from selenium.webdriver.support.ui import WebDriverWait, Select
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+import time
+
+# Step 1: Select "逐日盯市" (Mark-to-Market)
+select_element = Select(driver.find_element(By.NAME, "byType"))
+select_element.select_by_value("date")  # or .select_by_index(0)
+
+# Step 2: Click the submit button (提交)
+submit_button = driver.find_element(By.CSS_SELECTOR, "input.button[value='提交']")
+submit_button.click()
+
+# Step 3: Wait for the "下载" (Download) link and click it
+wait = WebDriverWait(driver, 10)
+download_link = wait.until(EC.element_to_be_clickable((By.ID, "myDownload")))
+download_link.click()
+print("✅ Download clicked.")
+
+# Step 4: Wait a moment for download to start
+time.sleep(2)  # Adjust if needed
+
+# Step 5: Click the logout button ("退出系统")
+logout_button = driver.find_element(By.CSS_SELECTOR, "input.button[name='logout']")
+logout_button.click()
+print("👋 Logged out successfully.")
