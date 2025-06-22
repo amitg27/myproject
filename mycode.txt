@@ -27,31 +27,36 @@ print("👋 Logged out successfully.")
 ----------------------------------
 import os
 import pandas as pd
-from openpyxl import Workbook
+from openpyxl import load_workbook
 
 def combine_excel_files_to_one(folder_path, output_file):
-    writer = pd.ExcelWriter(output_file, engine='openpyxl')
     sheet_names = []
+    dataframes = {}
 
-    # Iterate over all Excel files in the folder
+    # Collect data from each Excel file
     for filename in os.listdir(folder_path):
         if filename.endswith(".xlsx") or filename.endswith(".xls"):
             file_path = os.path.join(folder_path, filename)
-            sheet_name = os.path.splitext(filename)[0][:31]  # Sheet name max length is 31 chars
+            sheet_name = os.path.splitext(filename)[0][:31]  # Max sheet name length
             sheet_names.append(sheet_name)
             
             try:
                 df = pd.read_excel(file_path)
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                dataframes[sheet_name] = df
             except Exception as e:
                 print(f"Failed to read {filename}: {e}")
 
-    # Create the Main sheet with list of sheet names
+    # First write the 'Main' sheet
     main_df = pd.DataFrame(sheet_names, columns=["Sheet Names"])
-    main_df.to_excel(writer, sheet_name='Main', index=False)
+    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+        main_df.to_excel(writer, sheet_name='Main', index=False)
 
-    writer.close()
-    print(f"Combined Excel saved to {output_file}")
+        # Append all other sheets
+        for sheet_name, df in dataframes.items():
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-# Example usage
-combine_excel_files_to_one("path/to/your/folder", "combined_output.xlsx")
+    print(f"Combined Excel saved to: {output_file}")
+
+# Example usage (save one level outside the current code folder)
+combine_excel_files_to_one("data/", "../combined_output.xlsx")
+
