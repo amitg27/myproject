@@ -25,75 +25,33 @@ logout_button = driver.find_element(By.CSS_SELECTOR, "input.button[name='logout'
 logout_button.click()
 print("👋 Logged out successfully.")
 ----------------------------------
-import base64
-#from selenium import webdriver
-#from selenium.webdriver.common.by import By
-#from selenium.webdriver.chrome.service import Service
-import time
-from playwright.sync_api import sync_playwright
 import os
+import pandas as pd
+from openpyxl import Workbook
 
-USER_ID = ''
-PASSWORD = ''
+def combine_excel_files_to_one(folder_path, output_file):
+    writer = pd.ExcelWriter(output_file, engine='openpyxl')
+    sheet_names = []
 
-DOWNLOAD_DIR = os.path.abspath("downloads")
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    # Iterate over all Excel files in the folder
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".xlsx") or filename.endswith(".xls"):
+            file_path = os.path.join(folder_path, filename)
+            sheet_name = os.path.splitext(filename)[0][:31]  # Sheet name max length is 31 chars
+            sheet_names.append(sheet_name)
+            
+            try:
+                df = pd.read_excel(file_path)
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+            except Exception as e:
+                print(f"Failed to read {filename}: {e}")
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=False)  # Use headless=True for fully headless
-    context = browser.new_context(accept_downloads=True)
-    page = context.new_page()
+    # Create the Main sheet with list of sheet names
+    main_df = pd.DataFrame(sheet_names, columns=["Sheet Names"])
+    main_df.to_excel(writer, sheet_name='Main', index=False)
 
-    # Open the CFMMC login page
-    page.goto("https://investorservice.cfmmc.com/")
+    writer.close()
+    print(f"Combined Excel saved to {output_file}")
 
-    # Wait for CAPTCHA to load
-    page.wait_for_selector("#imgVeriCode")
-
-    # Save CAPTCHA image locally
-    page.screenshot(path="login_page.png")
-    captcha_element = page.locator("#imgVeriCode")
-    captcha_element.screenshot(path="captcha.png")
-
-    print("CAPTCHA image saved as 'captcha.png'. Please open and read it.")
-    vericode = input("Enter CAPTCHA code: ")
-
-    # Fill the login form
-    page.fill('input[name="userID"]', USER_ID)
-    page.fill('input[name="password"]', PASSWORD)
-    page.fill('input[name="vericode"]', vericode)
-
-    # Submit the form
-    page.click('input[type="submit"]')
-    page.wait_for_load_state("networkidle")
-
-    # Wait for either success or error
-    try:
-        page.wait_for_selector(".error-msg", timeout=5000)
-        error = page.locator(".error-msg").inner_text()
-        print("Login failed:", error)
-    except:
-        print("Login likely successful. Saving post-login page...")
-        page.screenshot(path="after_login.png")
-        with open("after_login.html", "w", encoding="utf-8") as f:
-            f.write(page.content())
-    page.select_option('select[name="byType"]', value='date')
-    page.click('input[type="submit"].button')
-    page.wait_for_selector('a#myDownload')
-    with page.expect_download() as download_info:
-        page.click('a#myDownload')
-    download = download_info.value
-
-    # Save the downloaded Excel file
-    download_path = os.path.join(DOWNLOAD_DIR, download.suggested_filename)
-    download.save_as(download_path)
-
-    print(f"✅ File downloaded: {download_path}")
-    page.wait_for_selector('input[name="logout"][value="退出系统"]')
-    page.click('input[name="logout"][value="退出系统"]')
-    print("✅ Logged out successfully.")
-    time.sleep(5)
-    context.close()
-
-    browser.close()
-
+# Example usage
+combine_excel_files_to_one("path/to/your/folder", "combined_output.xlsx")
