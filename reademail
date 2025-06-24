@@ -1,0 +1,30 @@
+import requests
+
+# Your app credentials
+tenant_id = "YOUR_TENANT_ID"
+client_id = "YOUR_CLIENT_ID"
+client_secret = "YOUR_CLIENT_SECRET"
+
+# Step 1: Get access token
+token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+token_data = {
+    'grant_type': 'client_credentials',
+    'client_id': client_id,
+    'client_secret': client_secret,
+    'scope': 'https://graph.microsoft.com/.default'
+}
+token_r = requests.post(token_url, data=token_data)
+access_token = token_r.json().get("access_token")
+
+# Step 2: Use access token to read user's mail
+user_email = "employee@yourcompany.com"  # Replace with actual mailbox
+headers = {
+    'Authorization': f'Bearer {access_token}'
+}
+graph_url = f'https://graph.microsoft.com/v1.0/users/{user_email}/messages'
+response = requests.get(graph_url, headers=headers)
+
+emails = response.json()
+for msg in emails.get("value", []):
+    print(f"Subject: {msg['subject']}")
+    print(f"From: {msg['from']['emailAddress']['address']}")
