@@ -1,0 +1,70 @@
+import time
+import os
+from playwright.sync_api import sync_playwright
+
+def main():
+    USER_ID = "your_user_id"
+    PASSWORD = "your_password"
+
+    # Create a download directory inside Windmill's working directory
+    DOWNLOAD_DIR = "/tmp/downloads"
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)  # Can set to False for debugging
+        context = browser.new_context(accept_downloads=True)
+        page = context.new_page()
+
+        # Step 1: Go to login page
+        page.goto("https://investorservice.cfmmc.com/")
+        page.wait_for_selector("#imgVeriCode")
+
+        # Show CAPTCHA to user
+        page.screenshot(path="/tmp/login_page.png")
+        page.locator("#imgVeriCode").screenshot(path="/tmp/captcha.png")
+        print("CAPTCHA image saved at /tmp/captcha.png")
+        vericode = input("🔒 Enter CAPTCHA from image (/tmp/captcha.png): ")
+
+        # Step 2: Login
+        page.fill('input[name="userID"]', USER_ID)
+        page.fill('input[name="password"]', PASSWORD)
+        page.fill('input[name="vericode"]', vericode)
+        page.click('input[type="submit"]')
+        page.wait_for_load_state("networkidle")
+        print("✅ Logged in.")
+
+        # Step 3: Select "Mark to Market" and submit
+        page.select_option('select[name="byType"]', value='date')
+        page.click('input[type="submit"].button')
+        page.wait_for_load_state("networkidle")
+
+        # Step 4: Download file
+        page.wait_for_selector('a#myDownload')
+        with page.expect_download() as download_info:
+            page.click('a#myDownload')
+        download = download_info.value
+        file_path = os.path.join(DOWNLOAD_DIR, download.suggested_filename)
+        download.save_as(file_path)
+        print(f"✅ File downloaded at: {file_path}")
+
+        # Step 5: Logout and wait 5 seconds
+        page.wait_for_selector('input[name="logout"][value="退出系统"]')
+        page.click('input[name="logout"][value="退出系统"]')
+        print("✅ Logged out.")
+        time.sleep(5)
+
+        # Close browser
+        context.close()
+        browser.close()
+
+        return {"file_path": file_path}
+
+        from playwright.sync_api import sync_playwright
+
+def main():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            executable_path="/usr/bin/chromium",
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
