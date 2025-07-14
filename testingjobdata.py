@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 
-def scrape_naukri_jobs():
+def getjobsdata():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
@@ -58,7 +58,7 @@ def scrape_naukri_jobs():
 
 # Run and print data
 if __name__ == "__main__":
-    jobs = scrape_naukri_jobs()
+    jobs = getjobsdata()
     for idx, job in enumerate(jobs, start=1):
         print(f"{idx}. Job Title: {job['title']}")
         print(f"Employer: {job['employer']}")
